@@ -5,7 +5,7 @@ title-class: page-title-classic
 type: classic
 ---
 
-[Developers](developers) > [SVN](svn)
+[Developers](developers) > [SVN](git)
 
 
 ActiveMQ Classic 5
