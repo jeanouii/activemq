@@ -51,8 +51,26 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!--
+      JUnit 4 for backward compatibility
+      Do not add it to parent pom as it could be used in other modules, and we don't want that.
+      We only want it here to ease migration from JUnit 4 to JUnit 5 in projects using this module.
+      It will be removed as soon as we drop JUnit 4 support.
+    -->
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <version>4.13.2</version>
       <scope>provided</scope>
     </dependency>
 

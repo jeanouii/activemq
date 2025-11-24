@@ -16,24 +16,30 @@
  */
 package org.apache.activemq.junit;
 
-import org.junit.jupiter.api.TestTemplate;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.util.concurrent.TimeUnit;
 
-/**
- * A Custom Test annotation used to repeat a troublesome test multiple
- * times when attempting to reproduce an intermittent failure.
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ java.lang.annotation.ElementType.METHOD })
-@TestTemplate
-@ExtendWith(RepeatExtension.class)
-public @interface Repeat {
+class ActiveMQTestExtensionTest {
 
-    int repetitions() default 1;
+    private static final String TIMEOUT_PROPERTY = "org.apache.activemq.junit.testTimeoutMultiplier";
 
-    boolean untilFailure() default false;
+    @BeforeAll
+    static void enableTimeoutMultiplier() {
+        System.setProperty(TIMEOUT_PROPERTY, "2");
+    }
+
+    @AfterAll
+    static void clearTimeoutMultiplier() {
+        System.clearProperty(TIMEOUT_PROPERTY);
+    }
+
+    @Test
+    @ActiveMQTimeout(value = 50, unit = TimeUnit.MILLISECONDS)
+    void timeoutIsAdjustedByMultiplier() throws Exception {
+        // With the multiplier disabled this sleep would exceed the configured timeout.
+        Thread.sleep(75);
+    }
 }

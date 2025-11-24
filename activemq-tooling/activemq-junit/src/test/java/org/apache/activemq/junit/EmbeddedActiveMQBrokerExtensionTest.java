@@ -16,24 +16,28 @@
  */
 package org.apache.activemq.junit;
 
-import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * A Custom Test annotation used to repeat a troublesome test multiple
- * times when attempting to reproduce an intermittent failure.
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ java.lang.annotation.ElementType.METHOD })
-@TestTemplate
-@ExtendWith(RepeatExtension.class)
-public @interface Repeat {
+@ExtendWith(EmbeddedActiveMQBroker.class)
+public class EmbeddedActiveMQBrokerExtensionTest {
 
-    int repetitions() default 1;
+    @BeforeEach
+    public void setUp(EmbeddedActiveMQBroker broker) throws Exception {
+        assertTrue(broker.isStarted(), "Broker should be started");
+    }
 
-    boolean untilFailure() default false;
+    @AfterEach
+    public void tearDown(EmbeddedActiveMQBroker broker) throws Exception {
+        assertTrue(broker.isStarted(), "Broker should be started");
+    }
+
+    @Test
+    public void testStart(EmbeddedActiveMQBroker broker) throws Exception {
+        assertTrue(broker.isStarted(), "Broker should be started");
+    }
 }

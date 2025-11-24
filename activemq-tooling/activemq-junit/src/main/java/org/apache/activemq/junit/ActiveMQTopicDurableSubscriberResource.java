@@ -16,12 +16,12 @@
  */
 package org.apache.activemq.junit;
 
-import java.net.URI;
 import jakarta.jms.JMSException;
 import jakarta.jms.Topic;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQDestination;
+
+import java.net.URI;
 
 public class ActiveMQTopicDurableSubscriberResource extends AbstractActiveMQConsumerResource {
     String clientId = "test-client-id";

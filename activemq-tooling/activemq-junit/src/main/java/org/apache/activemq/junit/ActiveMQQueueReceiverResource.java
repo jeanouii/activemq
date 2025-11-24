@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.junit;
 
-import java.net.URI;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQDestination;
+
+import java.net.URI;
 
 public class ActiveMQQueueReceiverResource extends AbstractActiveMQConsumerResource {
     public ActiveMQQueueReceiverResource(String destinationName, ActiveMQConnectionFactory connectionFactory) {

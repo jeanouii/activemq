@@ -16,9 +16,6 @@
  */
 package org.apache.activemq.junit;
 
-import java.io.Serializable;
-import java.net.URI;
-import java.util.Map;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.JMSException;
 import jakarta.jms.MapMessage;
@@ -26,8 +23,11 @@ import jakarta.jms.Message;
 import jakarta.jms.MessageProducer;
 import jakarta.jms.ObjectMessage;
 import jakarta.jms.TextMessage;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
+
+import java.io.Serializable;
+import java.net.URI;
+import java.util.Map;
 
 public abstract class AbstractActiveMQProducerResource extends AbstractActiveMQClientResource {
     MessageProducer producer;

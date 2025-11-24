@@ -16,9 +16,6 @@
  */
 package org.apache.activemq.junit;
 
-import java.io.Serializable;
-import java.net.URI;
-import java.util.Map;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.IllegalStateException;
 import jakarta.jms.JMSException;
@@ -26,9 +23,12 @@ import jakarta.jms.MapMessage;
 import jakarta.jms.Message;
 import jakarta.jms.ObjectMessage;
 import jakarta.jms.TextMessage;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQDestination;
+
+import java.io.Serializable;
+import java.net.URI;
+import java.util.Map;
 
 public class ActiveMQDynamicTopicPublisherResource extends AbstractActiveMQProducerResource {
     public ActiveMQDynamicTopicPublisherResource(ActiveMQConnectionFactory connectionFactory) {

@@ -16,24 +16,24 @@
  */
 package org.apache.activemq.junit;
 
-import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.concurrent.TimeUnit;
 
 /**
- * A Custom Test annotation used to repeat a troublesome test multiple
- * times when attempting to reproduce an intermittent failure.
+ * JUnit Jupiter annotation that mirrors the legacy {@code @Test(timeout = ...)} attribute and
+ * honours the {@code org.apache.activemq.junit.testTimeoutMultiplier} system property.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ java.lang.annotation.ElementType.METHOD })
-@TestTemplate
-@ExtendWith(RepeatExtension.class)
-public @interface Repeat {
+@Target({ ElementType.METHOD, ElementType.TYPE })
+@ExtendWith(ActiveMQTestExtension.class)
+public @interface ActiveMQTimeout {
 
-    int repetitions() default 1;
+    long value();
 
-    boolean untilFailure() default false;
+    TimeUnit unit() default TimeUnit.MILLISECONDS;
 }

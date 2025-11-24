@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.junit;
 
-import java.util.concurrent.TimeUnit;
-
 import org.junit.Test;
 import org.junit.internal.runners.statements.FailOnTimeout;
 import org.junit.runners.BlockJUnit4ClassRunner;
@@ -26,6 +24,8 @@ import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * A Custom JUnit test runner for customizing JUnit tests run in ActiveMQ.

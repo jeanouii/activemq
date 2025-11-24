@@ -16,24 +16,13 @@
  */
 package org.apache.activemq.junit;
 
-import static org.apache.activemq.command.ActiveMQDestination.QUEUE_TYPE;
-
-import java.io.Serializable;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Map;
-
 import jakarta.jms.BytesMessage;
-import jakarta.jms.Connection;
 import jakarta.jms.JMSException;
 import jakarta.jms.MapMessage;
 import jakarta.jms.Message;
-import jakarta.jms.MessageProducer;
 import jakarta.jms.ObjectMessage;
-import jakarta.jms.Session;
 import jakarta.jms.StreamMessage;
 import jakarta.jms.TextMessage;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerFactory;
 import org.apache.activemq.broker.BrokerPlugin;
@@ -44,57 +33,91 @@ import org.apache.activemq.broker.region.policy.PolicyMap;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.plugin.StatisticsBrokerPlugin;
 import org.apache.activemq.pool.PooledConnectionFactory;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+
+import static org.apache.activemq.command.ActiveMQDestination.QUEUE_TYPE;
+
 /**
- * A JUnit Rule that embeds an ActiveMQ broker into a test.
+ * A JUnit Extension that embeds an ActiveMQ broker into a test.
  */
-public class EmbeddedActiveMQBroker extends ExternalResource {
-    Logger log = LoggerFactory.getLogger(this.getClass());
+public class EmbeddedActiveMQBroker implements BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+    private static final Logger LOG = LoggerFactory.getLogger(EmbeddedActiveMQBroker.class);
 
-    BrokerService brokerService;
-    InternalClient internalClient;
+    private final Supplier<BrokerService> brokerServiceFactory;
+    private BrokerService brokerService;
+    private InternalClient internalClient;
+    private final AtomicBoolean started = new AtomicBoolean(false);
 
-    /**
-     * Create an embedded ActiveMQ broker using defaults
-     * <p>
-     * The defaults are:
-     * - the broker name is 'embedded-broker'
-     * - JMX is enable but no management connector is created.
-     * - Persistence is disabled
-     */
     public EmbeddedActiveMQBroker() {
-        brokerService = new BrokerService();
-        brokerService.setUseJmx(true);
-        brokerService.getManagementContext().setCreateConnector(false);
-        brokerService.setUseShutdownHook(false);
-        brokerService.setPersistent(false);
-        brokerService.setBrokerName("embedded-broker");
+        this(() -> new EmbeddedActiveMQBrokerBuilder().buildBrokerService());
     }
 
-    /**
-     * Create an embedded ActiveMQ broker using a configuration URI
-     */
     public EmbeddedActiveMQBroker(String configurationURI) {
+        this(() -> createBrokerFromUri(configurationURI));
+    }
+
+    public EmbeddedActiveMQBroker(URI configurationURI) {
+        this(() -> createBrokerFromUri(configurationURI));
+    }
+
+    public EmbeddedActiveMQBroker(BrokerService brokerService) {
+        this(() -> cloneBrokerService(Objects.requireNonNull(brokerService, "BrokerService cannot be null")));
+    }
+
+    public EmbeddedActiveMQBroker(Supplier<BrokerService> brokerServiceFactory) {
+        this.brokerServiceFactory = Objects.requireNonNull(brokerServiceFactory, "BrokerService factory cannot be null");
+    }
+
+    private BrokerService ensureBrokerService() {
+        if (brokerService == null) {
+            brokerService = brokerServiceFactory.get();
+        }
+        return brokerService;
+    }
+
+    private static BrokerService createBrokerFromUri(String configurationURI) {
         try {
-            brokerService = BrokerFactory.createBroker(configurationURI);
+            return BrokerFactory.createBroker(configurationURI);
         } catch (Exception ex) {
             throw new RuntimeException("Exception encountered creating embedded ActiveMQ broker from configuration URI: " + configurationURI, ex);
         }
     }
 
-    /**
-     * Create an embedded ActiveMQ broker using a configuration URI
-     */
-    public EmbeddedActiveMQBroker(URI configurationURI) {
+    private static BrokerService createBrokerFromUri(URI configurationURI) {
         try {
-            brokerService = BrokerFactory.createBroker(configurationURI);
+            return BrokerFactory.createBroker(configurationURI);
         } catch (Exception ex) {
             throw new RuntimeException("Exception encountered creating embedded ActiveMQ broker from configuration URI: " + configurationURI, ex);
         }
     }
+
+    private static BrokerService cloneBrokerService(BrokerService template) {
+        BrokerService clone = new BrokerService();
+        clone.setBrokerName(template.getBrokerName());
+        clone.setUseJmx(template.isUseJmx());
+        clone.setPersistent(template.isPersistent());
+        clone.setUseShutdownHook(template.isUseShutdownHook());
+        clone.getManagementContext().setCreateConnector(template.getManagementContext().isCreateConnector());
+        clone.setPlugins(template.getPlugins());
+        return clone;
+    }
+
 
     public static void setMessageProperties(Message message, Map<String, Object> properties) {
         if (properties != null && properties.size() > 0) {
@@ -120,70 +143,96 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
     /**
      * Start the embedded ActiveMQ broker, blocking until the broker has successfully started.
      * <p/>
-     * The broker will normally be started by JUnit using the before() method.  This method allows the broker to
+     * The broker will normally be started by JUnit using the lifecycle callbacks. This method allows the broker to
      * be started manually to support advanced testing scenarios.
      */
     public void start() {
-        try {
-            this.configure();
-            brokerService.start();
-            internalClient = new InternalClient();
-            internalClient.start();
-        } catch (Exception ex) {
-            throw new RuntimeException("Exception encountered starting embedded ActiveMQ broker: {}" + this.getBrokerName(), ex);
+        if (started.getAndSet(true)) {
+            LOG.debug("Embedded ActiveMQ broker: {} is already started.", getBrokerName());
+            return;
         }
 
-        brokerService.waitUntilStarted();
+        LOG.info("Starting embedded ActiveMQ broker: {}", getBrokerName());
+        try {
+            BrokerService broker = ensureBrokerService();
+            this.configure();
+            broker.start();
+            broker.waitUntilStarted();
+            internalClient = new InternalClient(this);
+        } catch (Exception ex) {
+            started.set(false);
+            LOG.error("Exception encountered starting embedded ActiveMQ broker: {}", this.getBrokerName(), ex);
+            throw new RuntimeException(ex);
+        }
     }
 
     /**
      * Stop the embedded ActiveMQ broker, blocking until the broker has stopped.
      * <p/>
-     * The broker will normally be stopped by JUnit using the after() method.  This method allows the broker to
+     * The broker will normally be stopped by JUnit using the lifecycle callbacks. This method allows the broker to
      * be stopped manually to support advanced testing scenarios.
      */
     public void stop() {
+        if (!started.getAndSet(false)) {
+            LOG.debug("Embedded ActiveMQ broker: {} is already stopped.", getBrokerName());
+            return;
+        }
+
+        LOG.info("Stopping embedded ActiveMQ broker: {}", getBrokerName());
         if (internalClient != null) {
             internalClient.stop();
             internalClient = null;
         }
-        if (!brokerService.isStopped()) {
+        if (brokerService != null && brokerService.isStarted()) {
             try {
                 brokerService.stop();
+                brokerService.waitUntilStopped();
             } catch (Exception ex) {
-                log.warn("Exception encountered stopping embedded ActiveMQ broker: {}" + this.getBrokerName(), ex);
+                LOG.warn("Exception encountered stopping embedded ActiveMQ broker: {}", this.getBrokerName(), ex);
             }
         }
-
-        brokerService.waitUntilStopped();
+        brokerService = null;
     }
 
     /**
      * Start the embedded ActiveMQ Broker
      * <p/>
-     * Invoked by JUnit to setup the resource
+     * Invoked by JUnit Jupiter to setup the resource
      */
     @Override
-    protected void before() throws Throwable {
-        log.info("Starting embedded ActiveMQ broker: {}", this.getBrokerName());
-
+    public void beforeEach(ExtensionContext context) throws Exception {
         this.start();
+        context.getStore(ExtensionContext.Namespace.GLOBAL).put(getBrokerName(), this);
+    }
 
-        super.before();
+    @Override
+    public void beforeAll(ExtensionContext context) throws Exception {
+        beforeEach(context);
     }
 
     /**
      * Stop the embedded ActiveMQ Broker
      * <p/>
-     * Invoked by JUnit to tear down the resource
+     * Invoked by JUnit Jupiter to tear down the resource
      */
     @Override
-    protected void after() {
-        log.info("Stopping Embedded ActiveMQ Broker: {}", this.getBrokerName());
-
-        super.after();
-
+    public void afterEach(ExtensionContext context) {
         this.stop();
+    }
+
+    @Override
+    public void afterAll(ExtensionContext context) {
+        afterEach(context);
+    }
+
+    @Override
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+        return parameterContext.getParameter().getType().equals(EmbeddedActiveMQBroker.class);
+    }
+
+    @Override
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+        return this;
     }
 
     /**
@@ -218,7 +267,7 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
      * @return the embedded ActiveMQ broker
      */
     public BrokerService getBrokerService() {
-        return brokerService;
+        return ensureBrokerService();
     }
 
     /**
@@ -243,11 +292,12 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
      * @return the VM URL for the embedded broker
      */
     public String getVmURL(boolean failoverURL) {
+        BrokerService current = ensureBrokerService();
         if (failoverURL) {
-            return String.format("failover:(%s?create=false)", brokerService.getVmConnectorURI().toString());
+            return String.format("failover:(%s?create=false)", current.getVmConnectorURI().toString());
         }
 
-        return brokerService.getVmConnectorURI().toString() + "?create=false";
+        return current.getVmConnectorURI().toString() + "?create=false";
     }
 
     /**
@@ -282,21 +332,25 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
         return result;
     }
 
+    public boolean isStarted() {
+        return started.get() && brokerService != null && brokerService.isStarted();
+    }
+
     /**
      * Get the name of the embedded ActiveMQ Broker
      *
      * @return name of the embedded broker
      */
     public String getBrokerName() {
-        return brokerService.getBrokerName();
+        return ensureBrokerService().getBrokerName();
     }
 
     public void setBrokerName(String brokerName) {
-        brokerService.setBrokerName(brokerName);
+        ensureBrokerService().setBrokerName(brokerName);
     }
 
     public boolean isStatisticsPluginEnabled() {
-        BrokerPlugin[] plugins = brokerService.getPlugins();
+        BrokerPlugin[] plugins = ensureBrokerService().getPlugins();
 
         if (null != plugins) {
             for (BrokerPlugin plugin : plugins) {
@@ -312,7 +366,7 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
     public void enableStatisticsPlugin() {
         if (!isStatisticsPluginEnabled()) {
             BrokerPlugin[] newPlugins;
-            BrokerPlugin[] currentPlugins = brokerService.getPlugins();
+            BrokerPlugin[] currentPlugins = ensureBrokerService().getPlugins();
             if (null != currentPlugins && 0 < currentPlugins.length) {
                 newPlugins = new BrokerPlugin[currentPlugins.length + 1];
 
@@ -323,13 +377,13 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
 
             newPlugins[newPlugins.length - 1] = new StatisticsBrokerPlugin();
 
-            brokerService.setPlugins(newPlugins);
+            ensureBrokerService().setPlugins(newPlugins);
         }
     }
 
     public void disableStatisticsPlugin() {
         if (isStatisticsPluginEnabled()) {
-            BrokerPlugin[] currentPlugins = brokerService.getPlugins();
+            BrokerPlugin[] currentPlugins = ensureBrokerService().getPlugins();
             if (1 < currentPlugins.length) {
                 BrokerPlugin[] newPlugins = new BrokerPlugin[currentPlugins.length - 1];
 
@@ -339,9 +393,9 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
                         newPlugins[i++] = plugin;
                     }
                 }
-                brokerService.setPlugins(newPlugins);
+                ensureBrokerService().setPlugins(newPlugins);
             } else {
-                brokerService.setPlugins(null);
+                ensureBrokerService().setPlugins(null);
             }
 
         }
@@ -418,9 +472,7 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
      * @return the number of messages in the JMS Destination
      */
     public long getMessageCount(String destinationName) {
-        if (null == brokerService) {
-            throw new IllegalStateException("BrokerService has not yet been created - was before() called?");
-        }
+        BrokerService current = ensureBrokerService();
 
         // TODO: Figure out how to do this for Topics
         Destination destination = getDestination(destinationName);
@@ -443,13 +495,11 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
      * @return the ActiveMQ destination, null if not found
      */
     public Destination getDestination(String destinationName) {
-        if (null == brokerService) {
-            throw new IllegalStateException("BrokerService has not yet been created - was before() called?");
-        }
+        BrokerService current = ensureBrokerService();
 
         Destination destination = null;
         try {
-            destination = brokerService.getDestination(ActiveMQDestination.createDestination(destinationName, QUEUE_TYPE));
+            destination = current.getDestination(ActiveMQDestination.createDestination(destinationName, QUEUE_TYPE));
         } catch (RuntimeException runtimeEx) {
             throw runtimeEx;
         } catch (Exception ex) {
@@ -460,10 +510,11 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
     }
 
     private PolicyEntry getDefaultPolicyEntry() {
-        PolicyMap destinationPolicy = brokerService.getDestinationPolicy();
+        BrokerService current = ensureBrokerService();
+        PolicyMap destinationPolicy = current.getDestinationPolicy();
         if (null == destinationPolicy) {
             destinationPolicy = new PolicyMap();
-            brokerService.setDestinationPolicy(destinationPolicy);
+            current.setDestinationPolicy(destinationPolicy);
         }
 
         PolicyEntry defaultEntry = destinationPolicy.getDefaultEntry();
@@ -636,9 +687,7 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
 
 
     public Message peekMessage(String destinationName) {
-        if (null == brokerService) {
-            throw new NullPointerException("peekMessage failure  - BrokerService is null");
-        }
+        BrokerService current = ensureBrokerService();
 
         if (destinationName == null) {
             throw new IllegalArgumentException("peekMessage failure - destination name is required");
@@ -648,13 +697,13 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
         Destination brokerDestination = null;
 
         try {
-            brokerDestination = brokerService.getDestination(destination);
+            brokerDestination = current.getDestination(destination);
         } catch (Exception ex) {
             throw new EmbeddedActiveMQBrokerException("peekMessage failure - unexpected exception getting destination from BrokerService", ex);
         }
 
         if (brokerDestination == null) {
-            throw new IllegalStateException(String.format("peekMessage failure - destination %s not found in broker %s", destination.toString(), brokerService.getBrokerName()));
+            throw new IllegalStateException(String.format("peekMessage failure - destination %s not found in broker %s", destination.toString(), current.getBrokerName()));
         }
 
         org.apache.activemq.command.Message[] messages = brokerDestination.browse();
@@ -695,102 +744,7 @@ public class EmbeddedActiveMQBroker extends ExternalResource {
         }
     }
 
-    private class InternalClient {
-        ActiveMQConnectionFactory connectionFactory;
-        Connection connection;
-        Session session;
-        MessageProducer producer;
-
-        public InternalClient() {
-        }
-
-        void start() {
-            connectionFactory = createConnectionFactory();
-            try {
-                connection = connectionFactory.createConnection();
-                session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-                producer = session.createProducer(null);
-                connection.start();
-            } catch (JMSException jmsEx) {
-                throw new EmbeddedActiveMQBrokerException("Internal Client creation failure", jmsEx);
-            }
-        }
-
-        void stop() {
-            if (null != connection) {
-                try {
-                    connection.close();
-                } catch (JMSException jmsEx) {
-                    log.warn("JMSException encounter closing InternalClient connection - ignoring", jmsEx);
-                }
-            }
-        }
-
-        public BytesMessage createBytesMessage() {
-            checkSession();
-
-            try {
-                return session.createBytesMessage();
-            } catch (JMSException jmsEx) {
-                throw new EmbeddedActiveMQBrokerException("Failed to create BytesMessage", jmsEx);
-            }
-        }
-
-        public TextMessage createTextMessage() {
-            checkSession();
-
-            try {
-                return session.createTextMessage();
-            } catch (JMSException jmsEx) {
-                throw new EmbeddedActiveMQBrokerException("Failed to create TextMessage", jmsEx);
-            }
-        }
-
-        public MapMessage createMapMessage() {
-            checkSession();
-
-            try {
-                return session.createMapMessage();
-            } catch (JMSException jmsEx) {
-                throw new EmbeddedActiveMQBrokerException("Failed to create MapMessage", jmsEx);
-            }
-        }
-
-        public ObjectMessage createObjectMessage() {
-            checkSession();
-
-            try {
-                return session.createObjectMessage();
-            } catch (JMSException jmsEx) {
-                throw new EmbeddedActiveMQBrokerException("Failed to create ObjectMessage", jmsEx);
-            }
-        }
-
-        public StreamMessage createStreamMessage() {
-            checkSession();
-            try {
-                return session.createStreamMessage();
-            } catch (JMSException jmsEx) {
-                throw new EmbeddedActiveMQBrokerException("Failed to create StreamMessage", jmsEx);
-            }
-        }
-
-        public void pushMessage(ActiveMQDestination destination, Message message) {
-            if (producer == null) {
-                throw new IllegalStateException("JMS MessageProducer is null - has the InternalClient been started?");
-            }
-
-            try {
-                producer.send(destination, message);
-            } catch (JMSException jmsEx) {
-                throw new EmbeddedActiveMQBrokerException(String.format("Failed to push %s to %s", message.getClass().getSimpleName(), destination.toString()), jmsEx);
-            }
-        }
-
-        void checkSession() {
-            if (session == null) {
-                throw new IllegalStateException("JMS Session is null - has the InternalClient been started?");
-            }
-        }
+    public InternalClient getInternalClient() {
+        return internalClient;
     }
 }

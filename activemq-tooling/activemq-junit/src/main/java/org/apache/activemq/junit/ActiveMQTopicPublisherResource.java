@@ -16,11 +16,11 @@
  */
 package org.apache.activemq.junit;
 
-import java.net.URI;
 import jakarta.jms.JMSException;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQDestination;
+
+import java.net.URI;
 
 public class ActiveMQTopicPublisherResource extends AbstractActiveMQProducerResource {
     public ActiveMQTopicPublisherResource(String destinationName, ActiveMQConnectionFactory connectionFactory) {

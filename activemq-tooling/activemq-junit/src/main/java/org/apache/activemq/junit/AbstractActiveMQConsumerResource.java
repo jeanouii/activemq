@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.junit;
 
-import java.net.URI;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.JMSException;
 import jakarta.jms.MapMessage;
@@ -24,8 +23,9 @@ import jakarta.jms.Message;
 import jakarta.jms.MessageConsumer;
 import jakarta.jms.ObjectMessage;
 import jakarta.jms.TextMessage;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
+
+import java.net.URI;
 
 public abstract class AbstractActiveMQConsumerResource extends AbstractActiveMQClientResource {
     MessageConsumer consumer;

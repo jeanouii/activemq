@@ -20,19 +20,30 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-/**
- * Test rule used to allow a test to have the Repeat annotation applied.
- */
-public class RepeatRule implements TestRule {
+public class EmbeddedActiveMQBrokerRule implements TestRule {
+
+    private final EmbeddedActiveMQBroker broker;
+
+    public EmbeddedActiveMQBrokerRule() {
+        this.broker = new EmbeddedActiveMQBroker();
+    }
+
+    public EmbeddedActiveMQBroker getBroker() {
+        return broker;
+    }
 
     @Override
-    public Statement apply(Statement statement, Description description) {
-        Repeat repeat = description.getAnnotation(Repeat.class);
-
-        if (repeat != null) {
-            statement = RepeatStatement.builder().build(repeat, statement);
-        }
-
-        return statement;
+    public Statement apply(Statement base, Description description) {
+        return new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                broker.start();
+                try {
+                    base.evaluate();
+                } finally {
+                    broker.stop();
+                }
+            }
+        };
     }
 }

@@ -16,28 +16,23 @@
  */
 package org.apache.activemq.junit;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterAll;
 
-public class EmbeddedActiveMQBrokerRuleTest {
-    @Rule
-    public EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
+import java.util.concurrent.atomic.AtomicInteger;
 
-    @Before
-    public void setUp() throws Exception {
-        assertTrue( "Broker should be started", broker.brokerService.isStarted());
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class RepeatExtensionTest {
+
+    private static final AtomicInteger INVOCATION_COUNTER = new AtomicInteger();
+
+    @AfterAll
+    static void verifyRepetitions() {
+        assertEquals(3, INVOCATION_COUNTER.get(), "Repeat should run the test three times");
     }
 
-    @After
-    public void tearDown() throws Exception {
-        assertTrue( "Broker should still be running", broker.brokerService.isStarted());
-    }
-
-    @Test
-    public void testStart() throws Exception {
-
+    @Repeat(repetitions = 3)
+    void repeatsConfiguredNumberOfTimes() {
+        INVOCATION_COUNTER.incrementAndGet();
     }
 }

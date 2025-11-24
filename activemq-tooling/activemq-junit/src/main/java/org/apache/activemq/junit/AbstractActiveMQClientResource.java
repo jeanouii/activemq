@@ -16,9 +16,6 @@
  */
 package org.apache.activemq.junit;
 
-import java.io.Serializable;
-import java.net.URI;
-import java.util.Map;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.Connection;
 import jakarta.jms.JMSException;
@@ -28,20 +25,29 @@ import jakarta.jms.ObjectMessage;
 import jakarta.jms.Session;
 import jakarta.jms.StreamMessage;
 import jakarta.jms.TextMessage;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQDestination;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractActiveMQClientResource extends ExternalResource {
+import java.io.Serializable;
+import java.net.URI;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+public abstract class AbstractActiveMQClientResource implements BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback {
     Logger log = LoggerFactory.getLogger(this.getClass());
 
     ActiveMQConnectionFactory connectionFactory;
     Connection connection;
     Session session;
     ActiveMQDestination destination;
+    private final AtomicBoolean started = new AtomicBoolean(false);
 
     public AbstractActiveMQClientResource(ActiveMQConnectionFactory connectionFactory) {
         this.connectionFactory = connectionFactory;
@@ -96,35 +102,33 @@ public abstract class AbstractActiveMQClientResource extends ExternalResource {
 
     protected abstract void createClient() throws JMSException;
 
-    /**
-     * Start the Client
-     * <p/>
-     * Invoked by JUnit to setup the resource
-     */
     @Override
-    protected void before() throws Throwable {
-        log.info("Starting {}: {}", this.getClass().getSimpleName(), connectionFactory.getBrokerURL());
-
-        this.start();
-
-        super.before();
+    public void beforeAll(ExtensionContext context) throws Exception {
+        start();
     }
 
-    /**
-     * Stop the Client
-     * <p/>
-     * Invoked by JUnit to tear down the resource
-     */
     @Override
-    protected void after() {
-        log.info("Stopping {}: {}", this.getClass().getSimpleName(), connectionFactory.getBrokerURL());
+    public void afterAll(ExtensionContext context) {
+        stop();
+    }
 
-        super.after();
+    @Override
+    public void beforeEach(ExtensionContext context) throws Exception {
+        start();
+    }
 
-        this.stop();
+    @Override
+    public void afterEach(ExtensionContext context) {
+        stop();
     }
 
     public void start() {
+        if (!started.compareAndSet(false, true)) {
+            return;
+        }
+
+        log.info("Starting {}: {}", this.getClass().getSimpleName(), connectionFactory.getBrokerURL());
+
         try {
             try {
                 connection = connectionFactory.createConnection();
@@ -135,16 +139,24 @@ public abstract class AbstractActiveMQClientResource extends ExternalResource {
                 session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
                 createClient();
             } catch (JMSException jmsEx) {
+                started.set(false);
                 throw new RuntimeException("Producer initialization failed" + this.getClass().getSimpleName(), jmsEx);
             }
             connection.start();
         } catch (JMSException jmsEx) {
+            started.set(false);
             throw new IllegalStateException("Producer failed to start", jmsEx);
         }
         log.info("Ready to produce messages to {}", connectionFactory.getBrokerURL());
     }
 
     public void stop() {
+        if (!started.compareAndSet(true, false)) {
+            return;
+        }
+
+        log.info("Stopping {}: {}", this.getClass().getSimpleName(), connectionFactory.getBrokerURL());
+
         try {
             connection.close();
         } catch (JMSException jmsEx) {
@@ -162,6 +174,10 @@ public abstract class AbstractActiveMQClientResource extends ExternalResource {
         }
 
         return null;
+    }
+
+    public boolean isStarted() {
+        return started.get();
     }
 
     public BytesMessage createBytesMessage() throws JMSException {

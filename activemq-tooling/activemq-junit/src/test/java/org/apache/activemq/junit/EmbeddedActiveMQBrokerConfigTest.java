@@ -16,95 +16,96 @@
  */
 package org.apache.activemq.junit;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verify the get/set operations are working properly
  */
 public class EmbeddedActiveMQBrokerConfigTest {
 
-    // Don't use @Rule in this case - just testing getters/setters
-    EmbeddedActiveMQBroker instance;
-
-    @Before
-    public void setUp() throws Exception {
-        instance = new EmbeddedActiveMQBroker();
-    }
-
     @Test
     public void testGetVmURL() throws Exception {
-        assertEquals( "Default VM URL in incorrect", "failover:(vm://embedded-broker?create=false)", instance.getVmURL());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertEquals("failover:(vm://embedded-broker?create=false)", instance.getVmURL(), "Default VM URL in incorrect");
     }
 
     @Test
     public void testGetBrokerName() throws Exception {
-        assertEquals( "Default Broker Name in incorrect", "embedded-broker", instance.getBrokerName());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertEquals("embedded-broker", instance.getBrokerName(), "Default Broker Name in incorrect");
     }
 
     @Test
     public void testBrokerNameConfig() throws Exception {
         String dummyName = "test-broker-name";
 
-        instance.setBrokerName( dummyName);
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBrokerBuilder().withBrokerName(dummyName).build();
 
-        assertEquals( "Broker Name not set correctly", dummyName, instance.getBrokerName());
+        assertEquals(dummyName, instance.getBrokerName(), "Broker Name not set correctly");
     }
 
     @Test
     public void testStatisticsPluginConfig() throws Exception {
-        assertFalse( "Statistics plugin should not be enabled by default", instance.isStatisticsPluginEnabled());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertFalse(instance.isStatisticsPluginEnabled(), "Statistics plugin should not be enabled by default");
         instance.enableStatisticsPlugin();
-        assertTrue( "Statistics plugin not enabled", instance.isStatisticsPluginEnabled());
+        assertTrue(instance.isStatisticsPluginEnabled(), "Statistics plugin not enabled");
         instance.disableStatisticsPlugin();
-        assertFalse( "Statistics plugin not disabled", instance.isStatisticsPluginEnabled());
+        assertFalse(instance.isStatisticsPluginEnabled(), "Statistics plugin not disabled");
     }
 
     @Test
     public void testAdvisoryForDeliveryConfig() throws Exception {
-        assertFalse( "Advisory messages for delivery should not be enabled by default", instance.isAdvisoryForDeliveryEnabled());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertFalse(instance.isAdvisoryForDeliveryEnabled(), "Advisory messages for delivery should not be enabled by default");
         instance.enableAdvisoryForDelivery();
-        assertTrue( "Advisory messages for delivery not enabled", instance.isAdvisoryForDeliveryEnabled());
+        assertTrue(instance.isAdvisoryForDeliveryEnabled(), "Advisory messages for delivery not enabled");
         instance.disableAdvisoryForDelivery();
-        assertFalse( "Advisory messages for delivery not disabled", instance.isAdvisoryForDeliveryEnabled());
+        assertFalse(instance.isAdvisoryForDeliveryEnabled(), "Advisory messages for delivery not disabled");
     }
 
     @Test
     public void testAdvisoryForConsumedConfig() throws Exception {
-        assertFalse( "Advisory messages for consumed should not be enabled by default", instance.isAdvisoryForConsumedEnabled());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertFalse(instance.isAdvisoryForConsumedEnabled(), "Advisory messages for consumed should not be enabled by default");
         instance.enableAdvisoryForConsumed();
-        assertTrue( "Advisory messages for consumed not enabled", instance.isAdvisoryForConsumedEnabled());
+        assertTrue(instance.isAdvisoryForConsumedEnabled(), "Advisory messages for consumed not enabled");
         instance.disableAdvisoryForConsumed();
-        assertFalse( "Advisory messages for consumed not disabled", instance.isAdvisoryForConsumedEnabled());
+        assertFalse(instance.isAdvisoryForConsumedEnabled(), "Advisory messages for consumed not disabled");
     }
 
     @Test
     public void testAdvisoryForDiscardingMessagesConfig() throws Exception {
-        assertFalse( "Advisory messages for discarding messages should not be enabled by default", instance.isAdvisoryForDiscardingMessagesEnabled());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertFalse(instance.isAdvisoryForDiscardingMessagesEnabled(), "Advisory messages for discarding messages should not be enabled by default");
         instance.enableAdvisoryForDiscardingMessages();
-        assertTrue( "Advisory messages for discarding messages not enabled", instance.isAdvisoryForDiscardingMessagesEnabled());
+        assertTrue(instance.isAdvisoryForDiscardingMessagesEnabled(), "Advisory messages for discarding messages not enabled");
         instance.disableAdvisoryForDiscardingMessages();
-        assertFalse( "Advisory messages for discarding messages not disabled", instance.isAdvisoryForDiscardingMessagesEnabled());
+        assertFalse(instance.isAdvisoryForDiscardingMessagesEnabled(), "Advisory messages for discarding messages not disabled");
     }
 
     @Test
     public void testAdvisoryForFastProducersConfig() throws Exception {
-        assertFalse( "Advisory messages for fast producers should not be enabled by default", instance.isAdvisoryForFastProducersEnabled());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertFalse(instance.isAdvisoryForFastProducersEnabled(), "Advisory messages for fast producers should not be enabled by default");
         instance.enableAdvisoryForFastProducers();
-        assertTrue( "Advisory messages for fast producers not enabled", instance.isAdvisoryForFastProducersEnabled());
+        assertTrue(instance.isAdvisoryForFastProducersEnabled(), "Advisory messages for fast producers not enabled");
         instance.disableAdvisoryForFastProducers();
-        assertFalse( "Advisory messages for fast producers not disabled", instance.isAdvisoryForFastProducersEnabled());
+        assertFalse(instance.isAdvisoryForFastProducersEnabled(), "Advisory messages for fast producers not disabled");
     }
 
     @Test
     public void testAdvisoryForSlowConsumersConfig() throws Exception {
-        assertFalse( "Advisory messages for slow consumers should not be enabled by default", instance.isAdvisoryForSlowConsumersEnabled());
+        EmbeddedActiveMQBroker instance = new EmbeddedActiveMQBroker();
+        assertFalse(instance.isAdvisoryForSlowConsumersEnabled(), "Advisory messages for slow consumers should not be enabled by default");
         instance.enableAdvisoryForSlowConsumers();
-        assertTrue( "Advisory messages for slow consumers not enabled", instance.isAdvisoryForSlowConsumersEnabled());
+        assertTrue(instance.isAdvisoryForSlowConsumersEnabled(), "Advisory messages for slow consumers not enabled");
         instance.disableAdvisoryForSlowConsumers();
-        assertFalse( "Advisory messages for slow consumers not disabled", instance.isAdvisoryForSlowConsumersEnabled());
+        assertFalse(instance.isAdvisoryForSlowConsumersEnabled(), "Advisory messages for slow consumers not disabled");
     }
 
 }
