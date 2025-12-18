@@ -1219,6 +1219,7 @@ public class ActiveMQMessageConsumer implements MessageAvailableConsumer, StatsC
     }
 
     public void commit() throws JMSException {
+        clearDeliveredList();
         synchronized (deliveredMessages) {
             deliveredMessages.clear();
             clearPreviouslyDelivered();
