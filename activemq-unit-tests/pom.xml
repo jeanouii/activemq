@@ -572,7 +572,7 @@
             <configuration>
               <excludes combine.children="append">
                 <!-- These are performance tests and take too long to run -->
-                <exclude>**/perf/*</exclude>
+                <exclude>**/perf/**</exclude>
                 <!-- These are load tests and take too long to run -->
                 <exclude>**/load/*</exclude>
               </excludes>
@@ -717,7 +717,7 @@
             <configuration>
               <excludes combine.children="append">
                 <!-- These are performance tests and take too long to run -->
-                <exclude>**/perf/*</exclude>
+                <exclude>**/perf/**</exclude>
                 <!-- These are load tests and take too long to run -->
                 <exclude>**/load/*</exclude>
                 <!-- These tests run too slow to execute as part of the unit tests -->
@@ -1201,7 +1201,7 @@
                               <exclude>**/ManagedDurableSubscriptionTest.*</exclude>
                               <exclude>**/ThreeBrokerVirtualTopicNetworkAMQPATest.*</exclude>
                               <!-- These are performance tests and take too long to run -->
-                              <exclude>**/perf/*</exclude>
+                              <exclude>**/perf/**</exclude>
                               <!-- These are load tests and take too long to run -->
                               <exclude>**/load/*</exclude>
                           </excludes>

@@ -195,7 +195,7 @@
             <configuration>
               <excludes combine.children="append">
                 <!-- These are performance tests so take too long to run -->
-                <exclude>**/perf/*</exclude>
+                <exclude>**/perf/**</exclude>
                 <!-- These are load tests so take too long to run -->
                 <exclude>**/load/*</exclude>
                 <exclude>org/apache/activemq/transport/http/HttpClientReconnectTest.*</exclude>
