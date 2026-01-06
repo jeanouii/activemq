@@ -519,6 +519,17 @@
           </execution>
         </executions>
         <configuration>
+          <forkCount>1</forkCount>
+          <reuseForks>false</reuseForks>
+          <argLine>-enableassertions</argLine>
+          <failIfNoTests>false</failIfNoTests>
+          <systemPropertyVariables>
+            <org.apache.activemq.default.directory.prefix>${project.build.directory}/</org.apache.activemq.default.directory.prefix>
+            <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
+            <org.apache.activemq.AutoFailTestSupport.disableSystemExit>true</org.apache.activemq.AutoFailTestSupport.disableSystemExit>
+            <org.apache.activemq.broker.jmx.createConnector>false</org.apache.activemq.broker.jmx.createConnector>
+          </systemPropertyVariables>
+          <argLine>-Xmx512m</argLine>
           <includes>
             <include>**/VirtualThreadTaskRunnerBrokerTest.java</include>
             <include>**/DLQRetryTest.java</include>
